@@ -23,14 +23,16 @@ CREATE TABLE sys_user (
     username    VARCHAR(50)  NOT NULL                COMMENT '登录用户名，唯一',
     password    VARCHAR(64)  NOT NULL                COMMENT '登录密码，MD5加密存储',
     real_name   VARCHAR(50)  DEFAULT NULL            COMMENT '真实姓名',
-    email       VARCHAR(100) DEFAULT NULL            COMMENT '邮箱地址',
-    phone       VARCHAR(20)  DEFAULT NULL            COMMENT '手机号码',
+    email       VARCHAR(100) DEFAULT NULL            COMMENT '邮箱地址（唯一）',
+    phone       VARCHAR(20)  DEFAULT NULL            COMMENT '手机号码（唯一）',
     role        VARCHAR(20)  NOT NULL DEFAULT 'user' COMMENT '角色：admin-管理员，user-普通用户',
     status      TINYINT      NOT NULL DEFAULT 1      COMMENT '账号状态：1-启用，0-禁用',
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_username (username)
+    UNIQUE KEY uk_username (username),
+    UNIQUE KEY uk_email (email),
+    UNIQUE KEY uk_phone (phone)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统用户表';
 
 -- --------------------------------------------------------------------------

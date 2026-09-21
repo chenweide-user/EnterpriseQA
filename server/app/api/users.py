@@ -23,6 +23,53 @@ from app.schemas.user import (
     UserUpdate,
 )
 
+
+def _normalize(value: str | None) -> str | None:
+    """把空字符串规范化为 None，避免多个空值触发数据库唯一索引冲突。"""
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _check_unique_contact(
+    db: Session, email: str | None, phone: str | None, exclude_id: int | None = None
+) -> None:
+    """
+    校验邮箱与手机号的全局唯一性。
+
+    :param db: 数据库会话
+    :param email: 邮箱（可为空）
+    :param phone: 手机号（可为空）
+    :param exclude_id: 编辑时排除自身ID，避免与自己冲突
+    :raises HTTPException 400: 邮箱或手机号已被使用
+    """
+    conditions = []
+    if email is not None:
+        conditions.append(User.email == email)
+    if phone is not None:
+        conditions.append(User.phone == phone)
+
+    if not conditions:
+        return
+
+    stmt = select(User).where(or_(*conditions))
+    if exclude_id is not None:
+        stmt = stmt.where(User.id != exclude_id)
+
+    conflict = db.scalar(stmt)
+    if conflict is None:
+        return
+
+    if email is not None and conflict.email == email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="该邮箱已被使用"
+        )
+    if phone is not None and conflict.phone == phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="该手机号已被使用"
+        )
+
 # 用户路由，统一前缀 /api/users
 router = APIRouter(prefix="/api/users", tags=["用户管理"])
 
@@ -47,11 +94,15 @@ def update_profile(
     """
     # 仅更新调用方实际传入的非空字段
     if payload.real_name is not None:
-        current_user.real_name = payload.real_name
-    if payload.email is not None:
-        current_user.email = payload.email
-    if payload.phone is not None:
-        current_user.phone = payload.phone
+        current_user.real_name = payload.real_name.strip() or None
+
+    email = _normalize(payload.email)
+    phone = _normalize(payload.phone)
+    # 邮箱/手机号变更时校验全局唯一性（排除自身）
+    if email != current_user.email or phone != current_user.phone:
+        _check_unique_contact(db, email, phone, exclude_id=current_user.id)
+    current_user.email = email
+    current_user.phone = phone
 
     db.commit()
     db.refresh(current_user)
@@ -135,14 +186,19 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST, detail="用户名已存在"
         )
 
+    # 邮箱与手机号全局唯一校验（空字符串统一按 None 处理）
+    email = _normalize(payload.email)
+    phone = _normalize(payload.phone)
+    _check_unique_contact(db, email, phone)
+
     # 创建用户，密码做 MD5 加密；ID 取最小可用值，删除后可自动填补空缺
     user = User(
         id=next_available_id(db, User),
         username=payload.username,
         password=md5_encrypt(payload.password),
-        real_name=payload.real_name,
-        email=payload.email,
-        phone=payload.phone,
+        real_name=payload.real_name.strip() if payload.real_name else None,
+        email=email,
+        phone=phone,
         role=payload.role,
         status=payload.status,
     )
@@ -177,10 +233,21 @@ def update_user(
         )
 
     # 逐字段更新非空值
-    for field in ("real_name", "email", "phone", "role", "status"):
+    for field in ("role", "status"):
         value = getattr(payload, field)
         if value is not None:
             setattr(user, field, value)
+
+    if payload.real_name is not None:
+        user.real_name = payload.real_name.strip() or None
+
+    # 邮箱与手机号变更时校验全局唯一性（排除被编辑用户自身）
+    email = _normalize(payload.email)
+    phone = _normalize(payload.phone)
+    if email != user.email or phone != user.phone:
+        _check_unique_contact(db, email, phone, exclude_id=user.id)
+    user.email = email
+    user.phone = phone
 
     db.commit()
     db.refresh(user)

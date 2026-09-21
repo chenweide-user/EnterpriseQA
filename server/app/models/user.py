@@ -26,10 +26,10 @@ class User(Base):
     password: Mapped[str] = mapped_column(String(64), nullable=False, comment="登录密码（MD5）")
     # 真实姓名
     real_name: Mapped[Optional[str]] = mapped_column(String(50), default=None, comment="真实姓名")
-    # 邮箱
-    email: Mapped[Optional[str]] = mapped_column(String(100), default=None, comment="邮箱")
-    # 手机号
-    phone: Mapped[Optional[str]] = mapped_column(String(20), default=None, comment="手机号")
+    # 邮箱（全局唯一，允许为空）
+    email: Mapped[Optional[str]] = mapped_column(String(100), unique=True, default=None, comment="邮箱")
+    # 手机号（全局唯一，允许为空）
+    phone: Mapped[Optional[str]] = mapped_column(String(20), unique=True, default=None, comment="手机号")
     # 角色：admin 管理员 / user 普通用户
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user", comment="角色：admin/user")
     # 状态：1 启用 / 0 禁用
