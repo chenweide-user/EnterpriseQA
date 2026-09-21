@@ -1,0 +1,36 @@
+# ============================================
+# RAG 企业知识库问答系统 - 后端依赖清单
+# Python 3.13.5 / Windows
+# 安装命令: pip install -r requirements.txt
+# ============================================
+
+# --- Web 框架 ---
+fastapi==0.141.1
+uvicorn==0.53.0
+
+# --- 数据库 (MySQL 8) ---
+SQLAlchemy==2.0.54        # ORM 框架
+PyMySQL==1.2.3            # MySQL 驱动
+cryptography==50.0.1      # MySQL caching_sha2_password 认证支持
+
+# --- 配置 / 认证 / 上传 ---
+python-dotenv==1.2.3      # .env 环境变量读取
+pydantic-settings==2.15.0 # 配置管理
+python-multipart==0.0.32  # 表单与文件上传
+PyJWT==2.14.0             # JWT 登录令牌
+
+# --- LangChain RAG 全家桶 ---
+langchain==1.4.2
+langchain-core==1.6.3
+langchain-community==0.4.2
+langchain-text-splitters==1.1.2  # 文本切片
+langchain-openai==1.6.2          # 百炼 OpenAI 兼容模式(对话/嵌入)
+langchain-chroma==1.1.0          # Chroma 向量库集成
+
+# --- 向量数据库 ---
+chromadb==1.5.9
+
+# --- 文档解析 ---
+pypdf==6.19.0            # PDF 解析
+python-docx==1.2.0       # Word(.docx) 解析
+openpyxl==3.1.5          # Excel 解析
